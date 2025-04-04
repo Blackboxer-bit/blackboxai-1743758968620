@@ -74,12 +74,47 @@
         function createPlayer() {
             player = new THREE.Group();
             
-            // Player body
-            const geometry = new THREE.BoxGeometry(1, 2, 1);
-            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-            const cube = new THREE.Mesh(geometry, material);
-            cube.position.y = 1;
-            player.add(cube);
+            // Humanoid player model
+            const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 8);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0x00AA00,
+                shininess: 30
+            });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.y = 0.9;
+            player.add(body);
+            
+            // Head
+            const headGeometry = new THREE.SphereGeometry(0.3);
+            const headMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xFFD700,
+                shininess: 50
+            });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+            head.position.y = 1.8;
+            player.add(head);
+            
+            // Arms
+            const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+            const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            leftArm.position.set(-0.5, 1.1, 0);
+            leftArm.rotation.z = Math.PI/4;
+            player.add(leftArm);
+            
+            const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+            rightArm.position.set(0.5, 1.1, 0);
+            rightArm.rotation.z = -Math.PI/4;
+            player.add(rightArm);
+            
+            // Legs
+            const legGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 6);
+            const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+            leftLeg.position.set(-0.2, 0.4, 0);
+            player.add(leftLeg);
+            
+            const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+            rightLeg.position.set(0.2, 0.4, 0);
+            player.add(rightLeg);
             
             // Add to scene
             scene.add(player);
@@ -133,12 +168,47 @@
             for (let i = 0; i < count; i++) {
                 const bot = new THREE.Group();
                 
-                // Bot body
-                const geometry = new THREE.BoxGeometry(1, 2, 1);
-                const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                const cube = new THREE.Mesh(geometry, material);
-                cube.position.y = 1;
-                bot.add(cube);
+                // Humanoid enemy model
+                const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1.8, 8);
+                const bodyMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xAA0000,
+                    shininess: 30
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.9;
+                bot.add(body);
+                
+                // Head
+                const headGeometry = new THREE.SphereGeometry(0.3);
+                const headMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0x333333,
+                    shininess: 50
+                });
+                const head = new THREE.Mesh(headGeometry, headMaterial);
+                head.position.y = 1.8;
+                bot.add(head);
+                
+                // Arms
+                const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6);
+                const leftArm = new THREE.Mesh(armGeometry, bodyMaterial);
+                leftArm.position.set(-0.5, 1.1, 0);
+                leftArm.rotation.z = Math.PI/4;
+                bot.add(leftArm);
+                
+                const rightArm = new THREE.Mesh(armGeometry, bodyMaterial);
+                rightArm.position.set(0.5, 1.1, 0);
+                rightArm.rotation.z = -Math.PI/4;
+                bot.add(rightArm);
+                
+                // Legs
+                const legGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.8, 6);
+                const leftLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+                leftLeg.position.set(-0.2, 0.4, 0);
+                bot.add(leftLeg);
+                
+                const rightLeg = new THREE.Mesh(legGeometry, bodyMaterial);
+                rightLeg.position.set(0.2, 0.4, 0);
+                bot.add(rightLeg);
                 
                 // Random position
                 bot.position.set(
