@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Third-Person Shooter</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        Health: <span id="health">100</span> | 
+        Ammo: <span id="ammo">30</span> | 
+        Kills: <span id="kills">0</span>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+    <script>
+        // Game variables
+        let scene, camera, renderer, controls;
+        let player, weapon, bullets = [];
+        let bots = [];
+        let clock = new THREE.Clock();
+        let health = 100, ammo = 30, kills = 0;
+
+        // Initialize game
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Sky blue
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.y = 5;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // Add controls
+            controls = new THREE.PointerLockControls(camera, document.body);
+            
+            // Create player
+            createPlayer();
+            
+            // Create weapon
+            createWeapon();
+            
+            // Create environment
+            createEnvironment();
+            
+            // Spawn bots
+            spawnBots(5);
+            
+            // Add event listeners
+            document.addEventListener('click', shoot);
+            document.addEventListener('keydown', onKeyDown);
+            window.addEventListener('resize', onWindowResize);
+            
+            // Start game loop
+            animate();
+        }
+        
+        // Create player character
+        function createPlayer() {
+            player = new THREE.Group();
+            
+            // Player body
+            const geometry = new THREE.BoxGeometry(1, 2, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const cube = new THREE.Mesh(geometry, material);
+            cube.position.y = 1;
+            player.add(cube);
+            
+            // Add to scene
+            scene.add(player);
+            player.position.y = 0;
+        }
+        
+        // Create weapon
+        function createWeapon() {
+            weapon = new THREE.Group();
+            
+            // Weapon model
+            const geometry = new THREE.BoxGeometry(0.3, 0.1, 1);
+            const material = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(0.5, -0.2, -1);
+            weapon.add(mesh);
+            
+            // Attach to camera
+            camera.add(weapon);
+        }
+        
+        // Create environment
+        function createEnvironment() {
+            // Ground
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0x3a5f0b,
+                side: THREE.DoubleSide
+            });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+            
+            // Add some obstacles
+            for (let i = 0; i < 10; i++) {
+                const size = Math.random() * 3 + 1;
+                const geometry = new THREE.BoxGeometry(size, size, size);
+                const material = new THREE.MeshBasicMaterial({ color: 0x8B4513 });
+                const obstacle = new THREE.Mesh(geometry, material);
+                obstacle.position.set(
+                    Math.random() * 80 - 40,
+                    size/2,
+                    Math.random() * 80 - 40
+                );
+                scene.add(obstacle);
+            }
+        }
+        
+        // Spawn bots
+        function spawnBots(count) {
+            for (let i = 0; i < count; i++) {
+                const bot = new THREE.Group();
+                
+                // Bot body
+                const geometry = new THREE.BoxGeometry(1, 2, 1);
+                const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.y = 1;
+                bot.add(cube);
+                
+                // Random position
+                bot.position.set(
+                    Math.random() * 60 - 30,
+                    0,
+                    Math.random() * 60 - 30
+                );
+                
+                // Add to scene and bots array
+                scene.add(bot);
+                bots.push({
+                    mesh: bot,
+                    health: 100,
+                    speed: Math.random() * 0.05 + 0.02,
+                    nextMove: 0
+                });
+            }
+        }
+        
+        // Shoot weapon
+        function shoot() {
+            if (ammo <= 0) return;
+            ammo--;
+            updateHUD();
+            
+            // Create bullet
+            const bullet = new THREE.Mesh(
+                new THREE.SphereGeometry(0.1),
+                new THREE.MeshBasicMaterial({ color: 0xffff00 })
+            );
+            
+            // Set position and direction
+            bullet.position.copy(camera.position);
+            const direction = new THREE.Vector3(0, 0, -1);
+            direction.applyQuaternion(camera.quaternion);
+            bullet.userData.velocity = direction.multiplyScalar(0.5);
+            
+            // Add to scene and bullets array
+            scene.add(bullet);
+            bullets.push(bullet);
+        }
+        
+        // Update bot AI
+        function updateBots() {
+            const delta = clock.getDelta();
+            
+            bots.forEach((bot, index) => {
+                // Simple AI: move toward player or random direction
+                bot.nextMove -= delta;
+                if (bot.nextMove <= 0) {
+                    const direction = new THREE.Vector3();
+                    direction.subVectors(player.position, bot.mesh.position).normalize();
+                    bot.mesh.position.add(direction.multiplyScalar(bot.speed));
+                    bot.nextMove = Math.random() * 2 + 1;
+                }
+                
+                // Check bullet collisions
+                bullets.forEach((bullet, bulletIndex) => {
+                    if (bullet.position.distanceTo(bot.mesh.position) < 1) {
+                        // Hit detected
+                        bot.health -= 25;
+                        scene.remove(bullet);
+                        bullets.splice(bulletIndex, 1);
+                        
+                        if (bot.health <= 0) {
+                            // Bot killed
+                            scene.remove(bot.mesh);
+                            bots.splice(index, 1);
+                            kills++;
+                            updateHUD();
+                            
+                            // Spawn new bot
+                            if (bots.length < 3) {
+                                spawnBots(1);
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Update bullets
+        function updateBullets() {
+            bullets.forEach((bullet, index) => {
+                bullet.position.add(bullet.userData.velocity);
+                
+                // Remove if too far
+                if (bullet.position.distanceTo(camera.position) > 100) {
+                    scene.remove(bullet);
+                    bullets.splice(index, 1);
+                }
+            });
+        }
+        
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('health').textContent = health;
+            document.getElementById('ammo').textContent = ammo;
+            document.getElementById('kills').textContent = kills;
+        }
+        
+        // Handle keyboard input
+        function onKeyDown(event) {
+            const speed = 0.2;
+            switch(event.key) {
+                case 'w': player.position.z -= speed; break;
+                case 's': player.position.z += speed; break;
+                case 'a': player.position.x -= speed; break;
+                case 'd': player.position.x += speed; break;
+                case 'r': ammo = 30; updateHUD(); break; // Reload
+            }
+        }
+        
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Game loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update controls
+            if (controls.isLocked) {
+                player.position.copy(controls.getObject().position);
+                player.position.y = 0;
+            }
+            
+            // Update game elements
+            updateBots();
+            updateBullets();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+        
+        // Start game
+        init();
+    </script>
+</body>
+</html>
